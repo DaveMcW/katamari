@@ -1,5 +1,5 @@
 local START_RADIUS = 0.68
-local MIN_PICKUP_SIZE = 0.0025
+local MIN_PICKUP_SIZE = 0.002
 local MAX_PICKUP_SIZE = 0.03
 local MAX_SPRITES = 120
 local TYPE_BLACKLIST = {
@@ -82,6 +82,7 @@ end
 
 function cache_entity(entity)
   if TYPE_BLACKLIST[entity.type] then return nil end
+  if entity.name:sub(1, 9) == "katamari-" then return end
   local data = {
     size = get_size(entity),
     volume = get_volume(entity),
@@ -226,6 +227,29 @@ function update_katamari(unit_number)
   katamari.y = new_y
   katamari.z = new_z
   normalize_quaternion(katamari)
+
+  -- Search for new items
+  local entities = katamari.entity.surface.find_entities_filtered{
+    position = katamari.entity.position,
+    radius = katamari.radius,
+  }
+  local min_target = katamari.volume * MIN_PICKUP_SIZE
+  local max_target = katamari.volume * MAX_PICKUP_SIZE
+  for _, entity in pairs(entities) do
+    local name = "entity/" .. entity.name
+    if entity.type == "item-entity" then
+      name = "item/" .. entity.stack.name
+    end
+    if global.items[name] then
+      local volume = global.items[name].volume
+      if volume >= min_target and volume <= max_target then
+        katamari.volume = katamari.volume + volume
+        katamari.radius = math.pow(katamari.volume, 1/3)
+        add_sprite(katamari, name)
+        entity.destroy()
+      end
+    end
+  end
 
   -- Draw sprites
   draw_sprites(katamari)
