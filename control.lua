@@ -61,6 +61,13 @@ function on_init()
 end
 
 function on_configuration_changed()
+  -- Low density structure unlocks katamari recipe
+  for _, force in pairs(game.forces) do
+    if force.technologies["low-density-structure"].researched then
+      force.recipes["katamari"].enabled = true
+    end
+  end
+
   -- Cache entity and item dimensions
   global.items = {}
   for _, entity in pairs(game.entity_prototypes) do
@@ -112,6 +119,8 @@ function on_built(event)
     area = 4 * math.pi * START_RADIUS * START_RADIUS,
     w=1, x=0, y=0, z=0,  -- Rotation is stored as a quaternion
   }
+  -- Disable gui
+  entity.operable = false
 end
 
 function on_player_driving_changed_state(event)
@@ -121,21 +130,39 @@ function on_player_driving_changed_state(event)
   local katamari = global.katamaris[event.entity.unit_number]
   local player = game.players[event.player_index]
   if player.driving then
-    -- Create dummy driver as a clone of the player
+    -- Create a dummy driver as a clone of the player
     if player.character then
       katamari.driver = katamari.entity.surface.create_entity{
         name = player.character.name,
         force = katamari.entity.force,
         position = katamari.entity.position,
       }
+      -- Give the dummy the same armor as the player
+      local inventory = player.character.get_inventory(defines.inventory.character_armor)
+      for i = 1, #inventory do
+        if inventory[i].valid_for_read then
+          katamari.driver.insert{name = inventory[i].name, count = inventory[i].count}
+        end
+      end
+      -- Disable dummy driver interactions
       katamari.driver.destructible = false
       katamari.driver.operable = false
       katamari.last_orientation = nil
     end
   else
-    -- Destroy dummy driver
     if katamari.driver then
-      player.teleport({katamari.driver.position.x, katamari.driver.position.y})
+      -- Teleport player to the dummy driver's position
+      local position = katamari.driver.surface.find_non_colliding_position(
+        katamari.driver.name,
+        katamari.driver.position,
+        katamari.radius * 1.5 + 2,
+        0.1
+      )
+      if not position then
+        position = katamari.driver.position
+      end
+      player.teleport(position)
+      -- Destroy dummy driver
       katamari.driver.destroy()
     end
     katamari.driver = nil

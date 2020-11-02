@@ -35,7 +35,6 @@ local recipe = {
   type = "recipe",
   name = "katamari",
   result = "katamari",
-  enabled = true,
   energy_required = 10,
   ingredients = {
     {"plastic-bar", 1200},
@@ -44,6 +43,10 @@ local recipe = {
   },
 }
 data:extend{recipe}
+
+-- Low density structure unlocks katamari recipe
+local effect = {type = "unlock-recipe", recipe = "katamari"}
+table.insert(data.raw.technology["low-density-structure"].effects, effect)
 
 -- 1.1
 -- 1.2
