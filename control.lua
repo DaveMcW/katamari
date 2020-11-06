@@ -113,6 +113,7 @@ function on_built(event)
   local entity = event.created_entity or event.entity or event.destination
   if not entity or not entity.valid then return end
   if entity.name:sub(1, 9) ~= "katamari-" then return end
+
   -- Create katamari table
   local katamari = {
     entity = entity,
@@ -124,6 +125,9 @@ function on_built(event)
     area = 4 * math.pi * START_RADIUS * START_RADIUS,
     w=1, x=0, y=0, z=0,  -- Rotation is stored as a quaternion
   }
+  global.katamaris[entity.unit_number] = katamari
+
+  -- Add empty katamari circle
   katamari.circle = rendering.draw_sprite{
     sprite = "katamari-circle",
     surface = entity.surface,
@@ -132,7 +136,8 @@ function on_built(event)
     y_scale = START_RADIUS * 0.8889,
     render_layer = 130,
   }
-  -- Coordinates of the 12 knobs
+
+  -- Add 12 knobs
   -- https://en.wikipedia.org/wiki/Regular_icosahedron#Cartesian_coordinates
   create_knob(katamari,  0.0000,  0.5257,  0.8507)
   create_knob(katamari,  0.0000,  0.5257, -0.8507)
@@ -146,7 +151,6 @@ function on_built(event)
   create_knob(katamari,  0.5257, -0.8507,  0.0000)
   create_knob(katamari, -0.5257,  0.8507,  0.0000)
   create_knob(katamari, -0.5257, -0.8507,  0.0000)
-  global.katamaris[entity.unit_number] = katamari
 end
 
 function on_player_driving_changed_state(event)
@@ -321,33 +325,16 @@ function update_katamari(unit_number)
   normalize_quaternion(katamari)
 
   -- Search for targets
-  local max_target = katamari.area * MAX_PICKUP_SIZE
-  local min_target = katamari.area * MIN_PICKUP_SIZE
   local entities = katamari.entity.surface.find_entities_filtered{
     position = katamari.entity.position,
     radius = katamari.radius,
   }
   for _, entity in pairs(entities) do
     if entity.valid then
-      local name = "entity/" .. entity.name
-      if entity.type == "item-entity" then
-        name = "item/" .. entity.stack.name
+      if entity.type == "transport-belt" or entity.type == "splitter" then
+        eat_transport_items(katamari, entity)
       end
-      if global.items[name] then
-        local area = global.items[name].area
-        if area <= max_target then
-          -- Eat target
-          entity.destroy({raise_destroy = true})
-          -- Minimum size required to grow
-          if area >= min_target then
-            local healing = katamari.entity.prototype.max_health * area / katamari.area
-            katamari.entity.health = katamari.entity.health + healing
-            katamari.area = katamari.area + area / GROWTH_COST
-            katamari.radius = math.sqrt(katamari.area / math.pi / 4)
-            add_sprite(katamari, name)
-          end
-        end
-      end
+      eat_entity(katamari, entity)
     end
   end
 
@@ -402,6 +389,67 @@ function update_katamari(unit_number)
     rendering.set_target(sprite.sprite_id, katamari.entity, target_offset)
     rendering.set_render_layer(sprite.sprite_id, math.floor(z * 30 + 129))
   end
+end
+
+function eat_entity(katamari, entity)
+  -- Look up entity
+  local name = "entity/" .. entity.name
+  if entity.type == "item-entity" then
+    name = "item/" .. entity.stack.name
+  end
+  if not global.items[name] then return end
+  local area = global.items[name].area
+
+  -- Minimum size required to eat
+  if area <= katamari.area * MAX_PICKUP_SIZE then
+    entity.destroy({raise_destroy = true})
+    -- Minimum size required to grow
+    if area >= katamari.area * MIN_PICKUP_SIZE then
+      grow_katamari(katamari, area)
+      add_sprite(katamari, name)
+    end
+  end
+end
+
+function eat_transport_items(katamari, entity)
+  -- Deconstruct entity so LuaTransportLine contains only the items we want
+  local to_be_deconstructed = entity.to_be_deconstructed()
+  if not to_be_deconstructed then
+    entity.order_deconstruction(entity.force)
+  end
+  -- Read LuaTransportLine
+  for i = 1, entity.get_max_transport_line_index() do
+    local transport_line = entity.get_transport_line(i)
+    for name, count in pairs(transport_line.get_contents()) do
+      local sprite_name = "item/" .. name
+      local data = global.items[sprite_name]
+      -- Minimum size required to eat
+      if data and data.area <= katamari.area * MAX_PICKUP_SIZE then
+        transport_line.remove_item{name = name, count = count}
+        -- Minimum size required to grow
+        if data.area >= katamari.area * MIN_PICKUP_SIZE then
+          for j = 1, count do
+            grow_katamari(katamari, data.area)
+            add_sprite(katamari, sprite_name)
+          end
+        end
+      end
+    end
+  end
+  local items = entity.get_transport_line(1)
+  -- Cancel deconstruction
+  if not to_be_deconstructed then
+    entity.cancel_deconstruction(entity.force)
+  end
+end
+
+function grow_katamari(katamari, area)
+  -- Heal
+  local healing = katamari.entity.prototype.max_health * area / katamari.area
+  katamari.entity.health = katamari.entity.health + healing
+  -- Increase size
+  katamari.area = katamari.area + area / GROWTH_COST
+  katamari.radius = math.sqrt(katamari.area / math.pi / 4)
 end
 
 function get_knob_name(z)
