@@ -4,6 +4,7 @@ local MIN_PICKUP_SIZE = 1 / 120
 local MAX_PICKUP_SIZE = 1 / 12
 local MAX_SPRITES = 120
 local KNOB_SCALE = 0.9
+local TWO_PI = 2 * math.pi
 local ENTITY_BLACKLIST = {
   ["arrow"] = 1,
   ["artillery-flare"] = 1,
@@ -55,9 +56,15 @@ local CUSTOM_SIZES = {
   ["car"] = {size = 3, area = 4},
   ["spidertron"] = {size = 4, area = 16},
   -- These selection boxes are larger than the graphics
+  ["tank"] = {size = 3, area = 8.8},
   ["crude-oil"] = {size = 2, area = 4},
 }
-local TWO_PI = 2 * math.pi
+local TRANSPORT_BELT_CONNECTABLE = {
+  ["loader"] = 1,
+  ["splitter"] = 1,
+  ["transport-belt"] = 1,
+  ["underground-belt"] = 1,
+}
 
 function on_init()
   global.katamaris = {}
@@ -331,7 +338,7 @@ function update_katamari(unit_number)
   }
   for _, entity in pairs(entities) do
     if entity.valid then
-      if entity.type == "transport-belt" or entity.type == "splitter" then
+      if TRANSPORT_BELT_CONNECTABLE[entity.type] then
         eat_transport_items(katamari, entity)
       end
       eat_entity(katamari, entity)
@@ -428,8 +435,8 @@ function eat_transport_items(katamari, entity)
         transport_line.remove_item{name = name, count = count}
         -- Minimum size required to grow
         if data.area >= katamari.area * MIN_PICKUP_SIZE then
+          grow_katamari(katamari, data.area * count)
           for j = 1, count do
-            grow_katamari(katamari, data.area)
             add_sprite(katamari, sprite_name)
           end
         end
