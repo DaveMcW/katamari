@@ -4,61 +4,13 @@ local MIN_PICKUP_SIZE = 1 / 120
 local MAX_PICKUP_SIZE = 1 / 12
 local MAX_SPRITES = 120
 local KNOB_SCALE = 0.9
+local CIRCLE_SCALE = 2 / (144 * 0.5 / 32)  -- diameter divided by sprite size
 local TWO_PI = 2 * math.pi
-local ENTITY_BLACKLIST = {
-  ["arrow"] = 1,
-  ["artillery-flare"] = 1,
-  ["artillery-projectile"] = 1,
-  ["beam"] = 1,
-  ["character"] = 1,
-  ["character-corpse"] = 1,
-  ["corpse"] = 1,
-  ["explosion"] = 1,
-  ["entity-ghost"] = 1,
-  ["flame-thrower-explosion"] = 1,
-  ["fire"] = 1,
-  ["flying-text"] = 1,
-  ["highlight-box"] = 1,
-  ["item-request-proxy"] = 1,
-  ["leaf-particle"] = 1,
-  ["projectile"] = 1,
-  ["particle"] = 1,
-  ["particle-source"] = 1,
-  ["rail-remnants"] = 1,
-  ["rocket-silo-rocket"] = 1,
-  ["rocket-silo-rocket-shadow"] = 1,
-  ["smoke"] = 1,
-  ["smoke-with-trigger"] = 1,
-  ["speech-bubble"] = 1,
-  ["spider-leg"] = 1,
-  ["sticker"] = 1,
-  ["stream"] = 1,
-  ["tile-ghost"] = 1,
-}
-local ITEM_BLACKLIST = {
-  ["blueprint"] = 1,
-  ["blueprint-book"] = 1,
-  ["deconstruction-item"] = 1,
-  ["selection-tool"] = 1,
-  ["upgrade-item"] = 1,
-}
-local CUSTOM_SIZES = {
-  -- These icons only show a piece of the entity
-  ["arithmetic-combinator"] = {size = 1, area = 2},
-  ["artillery-turret"] = {size = 4, area = 9},
-  ["artillery-wagon"] = {size = 4, area = 12},
-  ["cargo-wagon"] = {size = 4, area = 12},
-  ["decider-combinator"] = {size = 1, area = 2},
-  ["locomotive"] = {size = 4, area = 12},
-  ["fluid-wagon"] = {size = 3, area = 12},
-  ["steam-turbine"] = {size = 3.5, area = 15},
-  -- These selection boxes are smaller than the graphics
-  ["car"] = {size = 3, area = 4},
-  ["spidertron"] = {size = 4, area = 16},
-  -- These selection boxes are larger than the graphics
-  ["tank"] = {size = 3, area = 8.8},
-  ["crude-oil"] = {size = 2, area = 4},
-}
+local INVERSE_ROOT_2 = 1 / math.sqrt(2)
+local ENTITY_BLACKLIST = require("config.entity_blacklist")
+local ITEM_BLACKLIST = require("config.item_blacklist")
+local DECORATIVE_WHITELIST = require("config.decorative_whitelist")
+local CUSTOM_ENTITIES = require("config.custom_entities")
 local TRANSPORT_BELT_CONNECTABLE = {
   ["loader"] = 1,
   ["splitter"] = 1,
@@ -90,6 +42,9 @@ function on_configuration_changed()
     else
       global.items["item/" .. item.name] = cache_item(item)
     end
+  end
+  for _, decorative in pairs(game.decorative_prototypes) do
+    global.items["katamari-decorative-" .. decorative.name] = cache_decorative(decorative)
   end
   --log(serpent.block(global.items, {numformat = "%.5g"}))
 
@@ -139,8 +94,8 @@ function on_built(event)
     sprite = "katamari-circle",
     surface = entity.surface,
     target = entity,
-    x_scale = START_RADIUS * 0.8889,
-    y_scale = START_RADIUS * 0.8889,
+    x_scale = START_RADIUS * CIRCLE_SCALE,
+    y_scale = START_RADIUS * CIRCLE_SCALE,
     render_layer = 130,
   }
 
@@ -331,7 +286,16 @@ function update_katamari(unit_number)
   katamari.z = new_z
   normalize_quaternion(katamari)
 
-  -- Search for targets
+  -- Eat decoratives
+  local width = katamari.radius * INVERSE_ROOT_2
+  local p = katamari.entity.position
+  local area = {{p.x - width, p.y - width}, {p.x + width, p.y + width}}
+  local decoratives = katamari.entity.surface.find_decoratives_filtered{area = area}
+  for _, decorative in pairs(decoratives) do
+    eat_decorative(katamari, decorative)
+  end
+
+  -- Eat entities
   local entities = katamari.entity.surface.find_entities_filtered{
     position = katamari.entity.position,
     radius = katamari.radius,
@@ -358,7 +322,7 @@ function update_katamari(unit_number)
   local c3 = 1 - 2*katamari.x*katamari.x - 2*katamari.y*katamari.y
 
   -- Adjust circle
-  local diameter = katamari.radius * 0.8889
+  local diameter = katamari.radius * CIRCLE_SCALE
   if diameter ~= katamari.last_diameter then
     rendering.set_x_scale(katamari.circle, diameter)
     rendering.set_y_scale(katamari.circle, diameter)
@@ -450,6 +414,30 @@ function eat_transport_items(katamari, entity)
   end
 end
 
+function eat_decorative(katamari, target)
+  -- Look up decorative
+  local name = "katamari-decorative-" .. target.decorative.name
+  if not global.items[name] then return end
+  local area = global.items[name].area
+  -- Minimum size required to eat
+  if area <= katamari.area * MAX_PICKUP_SIZE then
+    katamari.entity.surface.destroy_decoratives{
+      position = target.position,
+      name = target.decorative.name,
+    }
+    -- Only add the handpicked set of decoratives
+    if DECORATIVE_WHITELIST[target.decorative.name] then
+      -- Minimum size required to grow
+      if area >= katamari.area * MIN_PICKUP_SIZE then
+        grow_katamari(katamari, area * target.amount)
+        for i = 1, target.amount do
+          add_sprite(katamari, name)
+        end
+      end
+    end
+  end
+end
+
 function grow_katamari(katamari, area)
   -- Heal
   local healing = katamari.entity.prototype.max_health * area / katamari.area
@@ -503,8 +491,8 @@ end
 function cache_entity(entity)
   if ENTITY_BLACKLIST[entity.type] then return nil end
   if entity.name:sub(1, 9) == "katamari-" then return nil end
-  if CUSTOM_SIZES[entity.name] then
-    return CUSTOM_SIZES[entity.name]
+  if CUSTOM_ENTITIES[entity.name] then
+    return CUSTOM_ENTITIES[entity.name]
   end
   return {size = get_size(entity), area = get_area(entity)}
 end
@@ -521,6 +509,15 @@ function cache_item(item)
   end
   -- Default to item-on-ground dimensions
   return {size = 0.5, area = global.items["entity/item-on-ground"].area}
+end
+
+function cache_decorative(decorative)
+  local size = math.min(get_width_height(decorative.collision_box))
+  local area = size * size
+  if DECORATIVE_WHITELIST[decorative.name] then
+    area = DECORATIVE_WHITELIST[decorative.name]
+  end
+  return {size = 1, area = area}
 end
 
 -- Calculate width and height
@@ -551,10 +548,15 @@ end
 
 -- Add a sprite to the katamari
 function add_sprite(katamari, name, x, y, z)
+  game.print(name)
   -- Compare with old sprite
   if katamari.sprites[katamari.next_sprite] then
     if global.items[name].area < katamari.sprites[katamari.next_sprite].area then
       -- Must be bigger than the old sprite
+      katamari.next_sprite = katamari.next_sprite + 1
+      if katamari.next_sprite > MAX_SPRITES then
+        katamari.next_sprite = 1
+      end
       return
     else
       -- Destroy old sprite
