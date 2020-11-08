@@ -189,7 +189,7 @@ end
 function delete_katamari(unit_number)
   local katamari = global.katamaris[unit_number]
   -- Delete dummy driver
-  if katamari.driver and katamari.driver.valid then
+  if katamari.driver and katamari.driver.valid and not katamari.growing then
     katamari.driver.destroy()
   end
   global.katamaris[unit_number] = nil
@@ -457,7 +457,6 @@ function grow_katamari(katamari, area)
   katamari.entity.destroy()
   new_entity.set_driver(driver)
   new_entity.set_passenger(passenger)
-  katamari.growing = nil
 
   -- Replace katamari
   local new_katamari = {}
@@ -466,6 +465,7 @@ function grow_katamari(katamari, area)
   end
   global.katamaris[new_entity.unit_number] = new_katamari
   new_katamari.entity = new_entity
+  new_katamari.growing = nil
 
   -- Redraw renderings
   draw_circle(new_katamari)
