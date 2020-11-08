@@ -1,5 +1,5 @@
 for i, radius in pairs(require("config.radius")) do
-  local collision = radius * 0.5
+  local collision = radius * 0.45
   local entity = {
     type = "car",
     name = "katamari-"..i,
@@ -11,16 +11,16 @@ for i, radius in pairs(require("config.radius")) do
     weight = 200,
     inventory_size = 0,
     energy_source = {type = "void"},
-    consumption = (10 * radius) .. "kW",
-    braking_power = (5 * radius) .. "kW",
+    consumption = (4 * radius) .. "kW",
+    braking_power = (2 * radius) .. "kW",
     effectivity = 1,
     tank_driving = true,
-    rotation_speed = 0.01 / radius,
+    rotation_speed = 0.002 / math.sqrt(radius),
     max_health = math.floor(1 + 4 * radius * radius) * 100,
     energy_per_hit_point = 100,
     immune_to_rock_impacts = true,
     immune_to_tree_impacts = true,
-    friction = 0.005,
+    friction = 0.002,
     light = {
       type = "basic",
       intensity = 1,
