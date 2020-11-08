@@ -11,6 +11,7 @@ local ITEM_BLACKLIST = require("config.item_blacklist")
 local DECORATIVE_WHITELIST = require("config.decorative_whitelist")
 local CUSTOM_ENTITIES = require("config.custom_entities")
 local RADII = require("config.radius")
+local KNOBS = require("config.knob_positions")
 local TRANSPORT_BELT_CONNECTABLE = {
   ["loader"] = 1,
   ["splitter"] = 1,
@@ -74,6 +75,7 @@ end
 function on_built(event)
   local entity = event.created_entity or event.entity or event.destination
   if not entity or not entity.valid then return end
+  if global.katamaris[entity.unit_number] then return end
   if entity.name:sub(1, 9) ~= "katamari-" then return end
   local size = tonumber(entity.name:sub(10))
   local radius = RADII[size]
@@ -100,19 +102,10 @@ function on_built(event)
   draw_circle(katamari)
 
   -- Add 12 knobs
-  -- https://en.wikipedia.org/wiki/Regular_icosahedron#Cartesian_coordinates
-  create_knob(katamari,  0.0000,  0.5257,  0.8507)
-  create_knob(katamari,  0.0000,  0.5257, -0.8507)
-  create_knob(katamari,  0.0000, -0.5257,  0.8507)
-  create_knob(katamari,  0.0000, -0.5257, -0.8507)
-  create_knob(katamari,  0.8507,  0.0000,  0.5257)
-  create_knob(katamari,  0.8507,  0.0000, -0.5257)
-  create_knob(katamari, -0.8507,  0.0000,  0.5257)
-  create_knob(katamari, -0.8507,  0.0000, -0.5257)
-  create_knob(katamari,  0.5257,  0.8507,  0.0000)
-  create_knob(katamari,  0.5257, -0.8507,  0.0000)
-  create_knob(katamari, -0.5257,  0.8507,  0.0000)
-  create_knob(katamari, -0.5257, -0.8507,  0.0000)
+  for i = 1, 12 do
+    table.insert(katamari.knobs, {})
+    draw_knob(katamari, i)
+  end
 end
 
 function on_player_driving_changed_state(event)
@@ -172,17 +165,6 @@ function on_player_driving_changed_state(event)
     end
     katamari.driver = nil
   end
-end
-
-function create_knob(katamari, x, y, z)
-  -- Save sprite data
-  local data = {
-    x = x,
-    y = y,
-    z = z,
-  }
-  table.insert(katamari.knobs, data)
-  draw_knob(katamari, data)
 end
 
 -- Delete katamari
@@ -314,13 +296,13 @@ function update_katamari(unit_number)
   -- Rotate knobs
   for i = 1, #katamari.knobs do
     local sprite = katamari.knobs[i]
-    local x = a1*sprite.x + a2*sprite.y + a3*sprite.z
-    local y = b1*sprite.x + b2*sprite.y + b3*sprite.z
-    local z = c1*sprite.x + c2*sprite.y + c3*sprite.z
+    local x = a1*KNOBS[i].x + a2*KNOBS[i].y + a3*KNOBS[i].z
+    local y = b1*KNOBS[i].x + b2*KNOBS[i].y + b3*KNOBS[i].z
+    local z = c1*KNOBS[i].x + c2*KNOBS[i].y + c3*KNOBS[i].z
     local target_offset = {x * katamari.radius, y * katamari.radius}
-    local render_layer = 128
+    local render_layer = 129
     if z > -0.0872 then
-      render_layer = 130
+      render_layer = 131
     end
     rendering.set_sprite(sprite.sprite_id, get_knob_name(z))
     rendering.set_x_scale(sprite.sprite_id, katamari.radius * KNOB_SCALE)
@@ -454,7 +436,7 @@ function grow_katamari(katamari, area)
   katamari.growing = true
   local driver = katamari.entity.get_driver()
   local passenger = katamari.entity.get_passenger()
-  katamari.entity.destroy()
+  katamari.entity.destroy{raise_destroy = true}
   new_entity.set_driver(driver)
   new_entity.set_passenger(passenger)
 
@@ -466,11 +448,14 @@ function grow_katamari(katamari, area)
   global.katamaris[new_entity.unit_number] = new_katamari
   new_katamari.entity = new_entity
   new_katamari.growing = nil
+  -- Raise event only after adding the kamamari to the global table,
+  -- so our on_built() function knows to ignore it
+  script.raise_event(defines.events.script_raised_built, {entity = new_entity})
 
   -- Redraw renderings
   draw_circle(new_katamari)
   for i = 1, #new_katamari.knobs do
-    draw_knob(new_katamari, new_katamari.knobs[i])
+    draw_knob(new_katamari, i)
   end
   for i = 1, #katamari.sprites do
     draw_sprite(new_katamari, new_katamari.sprites[i])
@@ -631,27 +616,27 @@ function draw_circle(katamari)
     target = katamari.entity,
     x_scale = katamari.radius * CIRCLE_SCALE,
     y_scale = katamari.radius * CIRCLE_SCALE,
-    render_layer = "object",
+    render_layer = 130,
   }
 end
 
 -- Draw sprite on the map
-function draw_knob(katamari, knob)
-  local render_layer = 128
-  if knob.z > -0.0872 then
-    render_layer = 130
+function draw_knob(katamari, i)
+  local render_layer = 129
+  if KNOBS[i].z > -0.0872 then
+    render_layer = 131
   end
   local sprite_id = rendering.draw_sprite{
-    sprite = get_knob_name(knob.z),
+    sprite = get_knob_name(KNOBS[i].z),
     surface = katamari.entity.surface,
     target = katamari.entity,
-    target_offset = {knob.x * katamari.radius, knob.y * katamari.radius},
+    target_offset = {KNOBS[i].x * katamari.radius, KNOBS[i].y * katamari.radius},
     x_scale = katamari.radius * KNOB_SCALE,
     y_scale = katamari.radius * KNOB_SCALE,
-    orientation = math.atan2(knob.x, -knob.y) / TWO_PI,
+    orientation = math.atan2(KNOBS[i].x, -KNOBS[i].y) / TWO_PI,
     render_layer = render_layer,
   }
-  knob.sprite_id = sprite_id
+  katamari.knobs[i].sprite_id = sprite_id
 end
 
 -- Draw sprite on the map

@@ -8,8 +8,8 @@ for i, radius in pairs(require("config.radius")) do
     minable = {result = "katamari-"..i, mining_time = radius * 2},
     collision_box = {{-collision, -collision}, {collision, collision}},
     selection_box = {{-radius, -radius}, {radius, radius}},
-    weight = 200,
     inventory_size = 0,
+    weight = 200,
     energy_source = {type = "void"},
     consumption = (4 * radius) .. "kW",
     braking_power = (2 * radius) .. "kW",
@@ -27,6 +27,9 @@ for i, radius in pairs(require("config.radius")) do
       size = radius * 3,
     },
     fast_replaceable_group = "katamari",
+    icon = "__katamari__/graphics/icon.png",
+    icon_mipmaps = 4,
+    icon_size = 64,
     animation = { layers = {
       {
         filename = "__katamari__/thumbnail.png",
