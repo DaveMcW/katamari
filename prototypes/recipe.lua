@@ -1,7 +1,7 @@
 local recipe = {
   type = "recipe",
   name = "katamari",
-  result = "katamari",
+  result = "katamari-1",
   energy_required = 10,
   ingredients = {
     {"plastic-bar", 1200},

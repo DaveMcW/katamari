@@ -1,4 +1,3 @@
-local START_RADIUS = 0.5
 local GROWTH_COST = 10
 local MIN_PICKUP_SIZE = 1 / 120
 local MAX_PICKUP_SIZE = 1 / 12
@@ -11,6 +10,7 @@ local ENTITY_BLACKLIST = require("config.entity_blacklist")
 local ITEM_BLACKLIST = require("config.item_blacklist")
 local DECORATIVE_WHITELIST = require("config.decorative_whitelist")
 local CUSTOM_ENTITIES = require("config.custom_entities")
+local RADII = require("config.radius")
 local TRANSPORT_BELT_CONNECTABLE = {
   ["loader"] = 1,
   ["splitter"] = 1,
@@ -75,6 +75,12 @@ function on_built(event)
   local entity = event.created_entity or event.entity or event.destination
   if not entity or not entity.valid then return end
   if entity.name:sub(1, 9) ~= "katamari-" then return end
+  local size = tonumber(entity.name:sub(10))
+  local radius = RADII[size]
+  if not radius then
+    entity.destroy{raise_destroy = true}
+    return
+  end
 
   -- Create katamari table
   local katamari = {
@@ -83,21 +89,15 @@ function on_built(event)
     sprites = {},
     knobs = {},
     next_sprite = 1,
-    radius = START_RADIUS,
-    area = 4 * math.pi * START_RADIUS * START_RADIUS,
+    size = size,
+    radius = radius,
+    area = 4 * math.pi * radius * radius,
     w=1, x=0, y=0, z=0,  -- Rotation is stored as a quaternion
   }
   global.katamaris[entity.unit_number] = katamari
 
-  -- Add empty katamari circle
-  katamari.circle = rendering.draw_sprite{
-    sprite = "katamari-circle",
-    surface = entity.surface,
-    target = entity,
-    x_scale = START_RADIUS * CIRCLE_SCALE,
-    y_scale = START_RADIUS * CIRCLE_SCALE,
-    render_layer = 130,
-  }
+  -- Draw circle
+  draw_circle(katamari)
 
   -- Add 12 knobs
   -- https://en.wikipedia.org/wiki/Regular_icosahedron#Cartesian_coordinates
@@ -116,10 +116,12 @@ function on_built(event)
 end
 
 function on_player_driving_changed_state(event)
-  -- Update katamari driver
   if not event.entity then return end
   if event.entity.name:sub(1, 9) ~= "katamari-" then return end
   local katamari = global.katamaris[event.entity.unit_number]
+  if not katamari then return end
+  if katamari.growing then return end
+  -- Update katamari driver
   local player = game.players[event.player_index]
   if player.driving then
     if player.character then
@@ -159,7 +161,7 @@ function on_player_driving_changed_state(event)
       local position = katamari.driver.surface.find_non_colliding_position(
         katamari.driver.name,
         katamari.driver.position,
-        katamari.radius * 1.5 + 2,
+        katamari.radius * 1.4 + 2,
         0.1
       )
       if position then
@@ -173,42 +175,22 @@ function on_player_driving_changed_state(event)
 end
 
 function create_knob(katamari, x, y, z)
-  -- Draw sprite on map
-  local render_layer = 129
-  if z > -0.0872 then
-    render_layer = 131
-  end
-  local sprite_id = rendering.draw_sprite{
-    sprite = get_knob_name(z),
-    surface = katamari.entity.surface,
-    target = katamari.entity,
-    target_offset = {x * katamari.radius, y * katamari.radius},
-    x_scale = katamari.radius * KNOB_SCALE,
-    y_scale = katamari.radius * KNOB_SCALE,
-    orientation = math.atan2(x, -y) / TWO_PI,
-    render_layer = render_layer,
-  }
-
   -- Save sprite data
   local data = {
-    sprite_id = sprite_id,
     x = x,
     y = y,
     z = z,
   }
   table.insert(katamari.knobs, data)
+  draw_knob(katamari, data)
 end
 
 -- Delete katamari
 function delete_katamari(unit_number)
   local katamari = global.katamaris[unit_number]
-  -- Delete sprites
-  rendering.destroy(katamari.circle)
-  for i = 1, #katamari.knobs do
-    rendering.destroy(katamari.knobs[i].sprite_id)
-  end
-  for i = 1, #katamari.sprites do
-    rendering.destroy(katamari.sprites[i].sprite_id)
+  -- Delete dummy driver
+  if katamari.driver and katamari.driver.valid then
+    katamari.driver.destroy()
   end
   global.katamaris[unit_number] = nil
 end
@@ -230,7 +212,7 @@ function update_katamari(unit_number)
   katamari.last_position = katamari.entity.position
 
   -- Update dummy driver
-  if katamari.driver then
+  if katamari.driver and katamari.driver.valid then
     local direction = math.floor((katamari.entity.orientation * 8 + 0.5) % 8)
     if katamari.entity.speed < 0 then
       direction = (direction + 4) % 8
@@ -292,7 +274,7 @@ function update_katamari(unit_number)
   local area = {{p.x - width, p.y - width}, {p.x + width, p.y + width}}
   local decoratives = katamari.entity.surface.find_decoratives_filtered{area = area}
   for _, decorative in pairs(decoratives) do
-    eat_decorative(katamari, decorative)
+    katamari = eat_decorative(katamari, decorative)
   end
 
   -- Eat entities
@@ -303,9 +285,9 @@ function update_katamari(unit_number)
   for _, entity in pairs(entities) do
     if entity.valid then
       if TRANSPORT_BELT_CONNECTABLE[entity.type] then
-        eat_transport_items(katamari, entity)
+        katamari = eat_transport_items(katamari, entity)
       end
-      eat_entity(katamari, entity)
+      katamari = eat_entity(katamari, entity)
     end
   end
 
@@ -336,9 +318,9 @@ function update_katamari(unit_number)
     local y = b1*sprite.x + b2*sprite.y + b3*sprite.z
     local z = c1*sprite.x + c2*sprite.y + c3*sprite.z
     local target_offset = {x * katamari.radius, y * katamari.radius}
-    local render_layer = 129
+    local render_layer = 128
     if z > -0.0872 then
-      render_layer = 131
+      render_layer = 130
     end
     rendering.set_sprite(sprite.sprite_id, get_knob_name(z))
     rendering.set_x_scale(sprite.sprite_id, katamari.radius * KNOB_SCALE)
@@ -358,7 +340,7 @@ function update_katamari(unit_number)
     -- Rendering takes 90% of the runtime
     -- TODO: Skip render calls when possible
     rendering.set_target(sprite.sprite_id, katamari.entity, target_offset)
-    rendering.set_render_layer(sprite.sprite_id, math.floor(z * 30 + 129))
+    rendering.set_render_layer(sprite.sprite_id, math.floor(z * 30 + 130))
   end
 end
 
@@ -368,18 +350,19 @@ function eat_entity(katamari, entity)
   if entity.type == "item-entity" then
     name = "item/" .. entity.stack.name
   end
-  if not global.items[name] then return end
+  if not global.items[name] then return katamari end
   local area = global.items[name].area
 
   -- Minimum size required to eat
   if area <= katamari.area * MAX_PICKUP_SIZE then
-    entity.destroy({raise_destroy = true})
+    entity.destroy{raise_destroy = true}
     -- Minimum size required to grow
     if area >= katamari.area * MIN_PICKUP_SIZE then
-      grow_katamari(katamari, area)
       add_sprite(katamari, name)
+      katamari = grow_katamari(katamari, area)
     end
   end
+  return katamari
 end
 
 function eat_transport_items(katamari, entity)
@@ -399,10 +382,10 @@ function eat_transport_items(katamari, entity)
         transport_line.remove_item{name = name, count = count}
         -- Minimum size required to grow
         if data.area >= katamari.area * MIN_PICKUP_SIZE then
-          grow_katamari(katamari, data.area * count)
           for j = 1, count do
             add_sprite(katamari, sprite_name)
           end
+          katamari = grow_katamari(katamari, data.area * count)
         end
       end
     end
@@ -412,12 +395,13 @@ function eat_transport_items(katamari, entity)
   if not to_be_deconstructed then
     entity.cancel_deconstruction(entity.force)
   end
+  return katamari
 end
 
 function eat_decorative(katamari, target)
   -- Look up decorative
   local name = "katamari-decorative-" .. target.decorative.name
-  if not global.items[name] then return end
+  if not global.items[name] then return katamari end
   local area = global.items[name].area
   -- Minimum size required to eat
   if area <= katamari.area * MAX_PICKUP_SIZE then
@@ -429,22 +413,69 @@ function eat_decorative(katamari, target)
     if DECORATIVE_WHITELIST[target.decorative.name] then
       -- Minimum size required to grow
       if area >= katamari.area * MIN_PICKUP_SIZE then
-        grow_katamari(katamari, area * target.amount)
         for i = 1, target.amount do
           add_sprite(katamari, name)
         end
+        katamari = grow_katamari(katamari, area * target.amount)
       end
     end
   end
+  return katamari
 end
 
 function grow_katamari(katamari, area)
   -- Heal
   local healing = katamari.entity.prototype.max_health * area / katamari.area
   katamari.entity.health = katamari.entity.health + healing
+
   -- Increase size
   katamari.area = katamari.area + area / GROWTH_COST
   katamari.radius = math.sqrt(katamari.area / math.pi / 4)
+
+  -- Upgrade entity
+  if not RADII[katamari.size + 1] then return katamari end
+  if RADII[katamari.size + 1] > katamari.radius then return katamari end
+  katamari.size = katamari.size + 1
+  local new_entity = katamari.entity.surface.create_entity{
+    name = "katamari-" .. katamari.size,
+    force = katamari.entity.force,
+    position = katamari.entity.position,
+  }
+  if not new_entity then return katamari end
+
+  -- Copy properties
+  new_entity.orientation = katamari.entity.orientation
+  new_entity.speed = katamari.entity.speed
+  local missing_health = katamari.entity.prototype.max_health - katamari.entity.health
+  new_entity.health = new_entity.health - missing_health
+  new_entity.riding_state = katamari.entity.riding_state
+
+  -- Transfer driver
+  katamari.growing = true
+  local driver = katamari.entity.get_driver()
+  local passenger = katamari.entity.get_passenger()
+  katamari.entity.destroy()
+  new_entity.set_driver(driver)
+  new_entity.set_passenger(passenger)
+  katamari.growing = nil
+
+  -- Replace katamari
+  local new_katamari = {}
+  for key, value in pairs(katamari) do
+    new_katamari[key] = value
+  end
+  global.katamaris[new_entity.unit_number] = new_katamari
+  new_katamari.entity = new_entity
+
+  -- Redraw renderings
+  draw_circle(new_katamari)
+  for i = 1, #new_katamari.knobs do
+    draw_knob(new_katamari, new_katamari.knobs[i])
+  end
+  for i = 1, #katamari.sprites do
+    draw_sprite(new_katamari, new_katamari.sprites[i])
+  end
+  return new_katamari
 end
 
 function get_knob_name(z)
@@ -548,7 +579,7 @@ end
 
 -- Add a sprite to the katamari
 function add_sprite(katamari, name, x, y, z)
-  game.print(name)
+  --TODO: game.print(name)
   -- Compare with old sprite
   if katamari.sprites[katamari.next_sprite] then
     if global.items[name].area < katamari.sprites[katamari.next_sprite].area then
@@ -574,33 +605,66 @@ function add_sprite(katamari, name, x, y, z)
     z = math.cos(lat)
   end
 
-  -- Draw sprite on map
-  local sprite_id = rendering.draw_sprite{
-    sprite = name,
-    surface = katamari.entity.surface,
-    target = katamari.entity,
-    target_offset = {x, y},
-    orientation = math.random(),
-    x_scale = global.items[name].size,
-    y_scale = global.items[name].size,
-  }
-
   -- Save sprite data
   local data = {
     name = name,
-    sprite_id = sprite_id,
     area = global.items[name].area,
+    orientation = math.random(),
     x = x,
     y = y,
     z = z,
   }
-
-  -- Write new sprite
   katamari.sprites[katamari.next_sprite] = data
   katamari.next_sprite = katamari.next_sprite + 1
   if katamari.next_sprite > MAX_SPRITES then
     katamari.next_sprite = 1
   end
+
+  -- Draw sprite
+  draw_sprite(katamari, data)
+end
+
+function draw_circle(katamari)
+  katamari.circle = rendering.draw_sprite{
+    sprite = "katamari-circle",
+    surface = katamari.entity.surface,
+    target = katamari.entity,
+    x_scale = katamari.radius * CIRCLE_SCALE,
+    y_scale = katamari.radius * CIRCLE_SCALE,
+    render_layer = "object",
+  }
+end
+
+-- Draw sprite on the map
+function draw_knob(katamari, knob)
+  local render_layer = 128
+  if knob.z > -0.0872 then
+    render_layer = 130
+  end
+  local sprite_id = rendering.draw_sprite{
+    sprite = get_knob_name(knob.z),
+    surface = katamari.entity.surface,
+    target = katamari.entity,
+    target_offset = {knob.x * katamari.radius, knob.y * katamari.radius},
+    x_scale = katamari.radius * KNOB_SCALE,
+    y_scale = katamari.radius * KNOB_SCALE,
+    orientation = math.atan2(knob.x, -knob.y) / TWO_PI,
+    render_layer = render_layer,
+  }
+  knob.sprite_id = sprite_id
+end
+
+-- Draw sprite on the map
+function draw_sprite(katamari, sprite)
+  local sprite_id = rendering.draw_sprite{
+    sprite = sprite.name,
+    surface = katamari.entity.surface,
+    target = katamari.entity,
+    orientation = sprite.orientation,
+    x_scale = global.items[sprite.name].size,
+    y_scale = global.items[sprite.name].size,
+  }
+  sprite.sprite_id = sprite_id
 end
 
 -- Convert to a unit quaternion
