@@ -8,6 +8,7 @@ for i, radius in pairs(require("config.radius")) do
     minable = {result = "katamari-"..i, mining_time = radius * 2},
     collision_box = {{-collision, -collision}, {collision, collision}},
     selection_box = {{-radius, -radius}, {radius, radius}},
+    flags = {"placeable-off-grid"},
     inventory_size = 0,
     weight = 200,
     energy_source = {type = "void"},

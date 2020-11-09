@@ -1,4 +1,3 @@
-local GROWTH_COST = 10
 local MIN_PICKUP_SIZE = 1 / 120
 local MAX_PICKUP_SIZE = 1 / 12
 local KNOB_SCALE = 0.9
@@ -155,7 +154,7 @@ function on_player_driving_changed_state(event)
       local position = katamari.driver.surface.find_non_colliding_position(
         katamari.driver.name,
         katamari.driver.position,
-        katamari.radius * 1.4 + 2,
+        katamari.radius * 1.25 + 3,
         0.1
       )
       if position then
@@ -433,7 +432,7 @@ function grow_katamari(katamari, area)
   katamari.entity.health = katamari.entity.health + healing
 
   -- Increase size
-  katamari.area = katamari.area + area / GROWTH_COST
+  katamari.area = katamari.area + area / settings.global["katamari-growth-cost"].value
   katamari.radius = math.sqrt(katamari.area / math.pi / 4)
 
   -- Upgrade entity

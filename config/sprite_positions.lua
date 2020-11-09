@@ -1,9 +1,9 @@
--- A snub dodecahedron and an icosahedron are merged
--- to make a grid of 60 + 12 = 72 points.
--- http://dmccooey.com/polyhedra/RsnubDodecahedron.txt
--- https://en.wikipedia.org/wiki/Regular_icosahedron#Cartesian_coordinates
+-- The 72 positions are the vertices of a pentakis snub dodecahedron
+-- projected on the unit sphere
+-- https://en.wikipedia.org/wiki/Pentakis_snub_dodecahedron
 return {
   -- 60 vertices from the snub dodecahedron
+  -- http://dmccooey.com/polyhedra/RsnubDodecahedron.txt
   {x =  0.1739, y =  0.1535, z =  0.9727},
   {x =  0.1739, y = -0.1535, z = -0.9727},
   {x = -0.1739, y =  0.1535, z = -0.9727},
@@ -64,7 +64,8 @@ return {
   {x = -0.3378, y =  0.6745, z =  0.6565},
   {x =  0.3378, y =  0.6745, z = -0.6565},
   {x = -0.3378, y = -0.6745, z = -0.6565},
-  -- 12 vertices from the icosahedron
+  -- 12 vertices from the icosahedron formed by the kis operation
+  -- https://en.wikipedia.org/wiki/Regular_icosahedron#Cartesian_coordinates
   {x =  0.0000, y =  0.8507, z =  0.5257},
   {x =  0.0000, y =  0.8507, z = -0.5257},
   {x =  0.0000, y = -0.8507, z =  0.5257},

@@ -3,6 +3,7 @@ for i, radius in pairs(require("config.radius")) do
     type = "item-with-entity-data",
     name = "katamari-"..i,
     localised_name = {"entity-name.katamari"},
+    localised_description = {"item-description.katamari", string.format("%.1f", 2*radius)},
     place_result = "katamari-"..i,
     subgroup = "transport",
     order = "b[personal-transport]-k[katamari]",
