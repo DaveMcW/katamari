@@ -23,6 +23,7 @@ return {
   ["behemoth-biter"] = {size = 5, area = 5},
   ["behemoth-spitter"] = {size = 5, area = 5},
   ["behemoth-worm-turret"] = {size = 7, area = 7.7},
+  ["cliff"] = {size = 4, area = 12},
   -- These selection boxes are larger than the graphics
   ["tank"] = {size = 3, area = 8.8},
   ["crude-oil"] = {size = 2, area = 4},
