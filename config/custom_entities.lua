@@ -1,3 +1,8 @@
+-- Default entity dimensions are:
+-- size = width or height of largest bounding box
+-- area = area of largest bounding box
+--
+-- When the default dimensions are inappropriate, they can be overridden here.
 return {
   -- These icons only show a piece of the entity
   ["arithmetic-combinator"] = {size = 1, area = 2},

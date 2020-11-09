@@ -1,3 +1,5 @@
+-- The 12 positions are the vertices of an icosahedron
+-- projected on the unit sphere
 -- https://en.wikipedia.org/wiki/Regular_icosahedron#Cartesian_coordinates
 return {
  {x =  0.0000, y =  0.8507, z =  0.5257},

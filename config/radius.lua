@@ -1,6 +1,8 @@
-local radii = {}
-local start_radius = 0.5
+-- Return the radius of each katamari entity
+local result = {}
+local radius = 0.35
 for i = 1, 25 do
-  radii[i] = start_radius * math.pow(1.2, i - 1)
+  result[i] = radius
+  radius = radius * 1.2
 end
-return radii
+return result

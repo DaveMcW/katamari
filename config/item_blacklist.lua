@@ -1,3 +1,4 @@
+-- The katamari can pick up these items, but they don't increase katamari size.
 return {
   ["blueprint"] = 1,
   ["blueprint-book"] = 1,

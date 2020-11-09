@@ -1,3 +1,4 @@
+-- Use different knob sprites to simulate 3D rotation
 return function(angle)
   -- Less than 5 degrees from the north pole of the unit sphere
   if angle > 0.9962 then

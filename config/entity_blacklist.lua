@@ -1,3 +1,4 @@
+-- The katamari cannot pick up these entities
 return {
   ["arrow"] = 1,
   ["artillery-flare"] = 1,

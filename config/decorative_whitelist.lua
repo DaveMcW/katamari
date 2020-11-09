@@ -1,3 +1,5 @@
+-- The katamari can pick up all decoratives,
+-- but these are the only ones that increase katamari size.
 return {
   ["brown-asterisk-mini"] = 0.2822,
   ["brown-fluff"] = 0.3525,
