@@ -101,8 +101,8 @@ function on_built(event)
   -- Draw circle
   draw_circle(katamari)
 
-  -- Add 12 knobs
-  for i = 1, 12 do
+  -- Add knobs
+  for i = 1, #KNOBS do
     table.insert(katamari.knobs, {})
     draw_knob(katamari, i)
   end
@@ -262,7 +262,7 @@ function update_katamari(unit_number)
   -- Eat entities
   local entities = katamari.entity.surface.find_entities_filtered{
     position = katamari.entity.position,
-    radius = katamari.radius,
+    radius = katamari.radius * 1.1,
   }
   for _, entity in pairs(entities) do
     if entity.valid then

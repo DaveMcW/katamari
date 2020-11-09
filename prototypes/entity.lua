@@ -1,5 +1,5 @@
 for i, radius in pairs(require("config.radius")) do
-  local collision = radius * 0.45
+  local collision = radius * 0.5
   local entity = {
     type = "car",
     name = "katamari-"..i,
