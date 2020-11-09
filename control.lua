@@ -12,6 +12,7 @@ local CUSTOM_ENTITIES = require("config.custom_entities")
 local RADII = require("config.radius")
 local SPRITES = require("config.sprite_positions")
 local KNOBS = require("config.knob_positions")
+local get_knob_name = require("config.knob_names")
 local TRANSPORT_BELT_CONNECTABLE = {
   ["loader"] = 1,
   ["splitter"] = 1,
@@ -307,7 +308,9 @@ function update_katamari(unit_number)
     -- Rendering functions are expensive, so try to find ways to avoid them
     if z > -0.5 then
       rendering.set_target(sprite.sprite_id, katamari.entity, target_offset)
-      rendering.set_orientation(sprite.sprite_id, math.atan2(x, -y) / TWO_PI)
+      if knob_name ~= "katamari-knob-1" then
+        rendering.set_orientation(sprite.sprite_id, math.atan2(x, -y) / TWO_PI)
+      end
     end
     if sprite.last_knob_name ~= knob_name then
       sprite.last_knob_name = knob_name
@@ -480,46 +483,6 @@ function grow_katamari(katamari, area)
     draw_sprite(new_katamari, new_katamari.sprites[i])
   end
   return new_katamari
-end
-
-function get_knob_name(z)
-  -- Less than 5 degrees from the north pole of the unit sphere
-  if z > 0.9962 then
-    return "katamari-knob-1"
-  -- 5 to 15 degrees
-  elseif z > 0.9659 then
-    return "katamari-knob-2"
-  -- 15 to 25 degrees
-  elseif z > 0.9063 then
-    return "katamari-knob-3"
-  -- 25 to 35 degrees
-  elseif z > 0.8192 then
-    return "katamari-knob-4"
-  -- 35 to 45 degrees
-  elseif z > 0.7071 then
-    return "katamari-knob-5"
-  -- 45 to 55 degrees
-  elseif z > 0.5736 then
-    return "katamari-knob-6"
-  -- 55 to 65 degrees
-  elseif z > 0.4226 then
-    return "katamari-knob-7"
-  -- 65 to 75 degrees
-  elseif z > 0.2588 then
-    return "katamari-knob-8"
-  -- 75 to 85 degrees
-  elseif z > 0.0872 then
-    return "katamari-knob-9"
-  -- 85 to 95 degrees
-  elseif z > -0.0872 then
-    return "katamari-knob-10"
-  -- 95 to 105 degrees
-  elseif z > -0.2588 then
-    return "katamari-knob-11"
-  -- More than 105 degrees
-  else
-    return "katamari-knob-12"
-  end
 end
 
 -- Calculate entity size and area
