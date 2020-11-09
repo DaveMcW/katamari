@@ -1,7 +1,6 @@
 local GROWTH_COST = 10
 local MIN_PICKUP_SIZE = 1 / 120
 local MAX_PICKUP_SIZE = 1 / 12
-local MAX_SPRITES = 120
 local KNOB_SCALE = 0.9
 local CIRCLE_SCALE = 2 / (144 * 0.5 / 32)  -- diameter divided by sprite size
 local TWO_PI = 2 * math.pi
@@ -11,6 +10,7 @@ local ITEM_BLACKLIST = require("config.item_blacklist")
 local DECORATIVE_WHITELIST = require("config.decorative_whitelist")
 local CUSTOM_ENTITIES = require("config.custom_entities")
 local RADII = require("config.radius")
+local SPRITES = require("config.sprite_positions")
 local KNOBS = require("config.knob_positions")
 local TRANSPORT_BELT_CONNECTABLE = {
   ["loader"] = 1,
@@ -326,9 +326,9 @@ function update_katamari(unit_number)
   -- Rotate sprites
   for i = 1, #katamari.sprites do
     local sprite = katamari.sprites[i]
-    local x = a1*sprite.x + a2*sprite.y + a3*sprite.z
-    local y = b1*sprite.x + b2*sprite.y + b3*sprite.z
-    local z = c1*sprite.x + c2*sprite.y + c3*sprite.z
+    local x = a1*SPRITES[i].x + a2*SPRITES[i].y + a3*SPRITES[i].z
+    local y = b1*SPRITES[i].x + b2*SPRITES[i].y + b3*SPRITES[i].z
+    local z = c1*SPRITES[i].x + c2*SPRITES[i].y + c3*SPRITES[i].z
     local target_offset = {x * katamari.radius, y * katamari.radius}
     local render_layer = math.floor(z * 20 + 132)
     if render_layer < 128 then
@@ -582,14 +582,14 @@ function get_area(entity)
 end
 
 -- Add a sprite to the katamari
-function add_sprite(katamari, name, x, y, z)
+function add_sprite(katamari, name)
   --TODO: game.print(name)
   -- Compare with old sprite
   if katamari.sprites[katamari.next_sprite] then
     if global.items[name].area < katamari.sprites[katamari.next_sprite].area then
       -- Must be bigger than the old sprite
       katamari.next_sprite = katamari.next_sprite + 1
-      if katamari.next_sprite > MAX_SPRITES then
+      if katamari.next_sprite > #SPRITES then
         katamari.next_sprite = 1
       end
       return
@@ -599,28 +599,15 @@ function add_sprite(katamari, name, x, y, z)
     end
   end
 
-  if not x or not y or not z then
-    -- Generate random point on the sphere
-    local lat = math.acos(math.random() * 2 - 1)
-    local long = math.random() * TWO_PI
-    local sin_lat = math.sin(lat)
-    x = sin_lat * math.cos(long)
-    y = sin_lat * math.sin(long)
-    z = math.cos(lat)
-  end
-
   -- Save sprite data
   local data = {
     name = name,
     area = global.items[name].area,
     orientation = math.random(),
-    x = x,
-    y = y,
-    z = z,
   }
   katamari.sprites[katamari.next_sprite] = data
   katamari.next_sprite = katamari.next_sprite + 1
-  if katamari.next_sprite > MAX_SPRITES then
+  if katamari.next_sprite > #SPRITES then
     katamari.next_sprite = 1
   end
 
@@ -669,6 +656,7 @@ function draw_sprite(katamari, sprite)
     y_scale = global.items[sprite.name].size,
   }
   sprite.sprite_id = sprite_id
+  sprite.last_render_layer = nil
 end
 
 -- Convert to a unit quaternion
