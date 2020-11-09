@@ -287,10 +287,9 @@ function update_katamari(unit_number)
 
   -- Adjust circle
   local diameter = katamari.radius * CIRCLE_SCALE
-  if diameter ~= katamari.last_diameter then
+  if katamari.last_diameter ~= diameter then
     rendering.set_x_scale(katamari.circle, diameter)
     rendering.set_y_scale(katamari.circle, diameter)
-    katamari.last_diameter = diameter
   end
 
   -- Rotate knobs
@@ -300,16 +299,28 @@ function update_katamari(unit_number)
     local y = b1*KNOBS[i].x + b2*KNOBS[i].y + b3*KNOBS[i].z
     local z = c1*KNOBS[i].x + c2*KNOBS[i].y + c3*KNOBS[i].z
     local target_offset = {x * katamari.radius, y * katamari.radius}
+    local knob_name = get_knob_name(z)
     local render_layer = 129
     if z > -0.0872 then
       render_layer = 131
     end
-    rendering.set_sprite(sprite.sprite_id, get_knob_name(z))
-    rendering.set_x_scale(sprite.sprite_id, katamari.radius * KNOB_SCALE)
-    rendering.set_y_scale(sprite.sprite_id, katamari.radius * KNOB_SCALE)
-    rendering.set_target(sprite.sprite_id, katamari.entity, target_offset)
-    rendering.set_orientation(sprite.sprite_id, math.atan2(x, -y) / TWO_PI)
-    rendering.set_render_layer(sprite.sprite_id, render_layer)
+    -- Rendering functions are expensive, so try to find ways to avoid them
+    if z > -0.5 then
+      rendering.set_target(sprite.sprite_id, katamari.entity, target_offset)
+      rendering.set_orientation(sprite.sprite_id, math.atan2(x, -y) / TWO_PI)
+    end
+    if sprite.last_knob_name ~= knob_name then
+      sprite.last_knob_name = knob_name
+      rendering.set_sprite(sprite.sprite_id, knob_name)
+    end
+    if sprite.last_render_layer ~= render_layer then
+      sprite.last_render_layer = render_layer
+      rendering.set_render_layer(sprite.sprite_id, render_layer)
+    end
+    if katamari.last_diameter ~= diameter then
+      rendering.set_x_scale(sprite.sprite_id, katamari.radius * KNOB_SCALE)
+      rendering.set_y_scale(sprite.sprite_id, katamari.radius * KNOB_SCALE)
+    end
   end
 
   -- Rotate sprites
@@ -319,11 +330,19 @@ function update_katamari(unit_number)
     local y = b1*sprite.x + b2*sprite.y + b3*sprite.z
     local z = c1*sprite.x + c2*sprite.y + c3*sprite.z
     local target_offset = {x * katamari.radius, y * katamari.radius}
-    -- Rendering takes 90% of the runtime
-    -- TODO: Skip render calls when possible
+    local render_layer = math.floor(z * 20 + 132)
+    if render_layer < 128 then
+      render_layer = 128
+    end
+    -- Rendering functions are expensive, so try to find ways to avoid them
     rendering.set_target(sprite.sprite_id, katamari.entity, target_offset)
-    rendering.set_render_layer(sprite.sprite_id, math.floor(z * 30 + 130))
+    if sprite.last_render_layer ~= render_layer then
+      sprite.last_render_layer = render_layer
+      rendering.set_render_layer(sprite.sprite_id, render_layer)
+    end
   end
+
+  katamari.last_diameter = diameter
 end
 
 function eat_entity(katamari, entity)
