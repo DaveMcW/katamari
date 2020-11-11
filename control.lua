@@ -180,22 +180,28 @@ function update_gui(player, radius)
   local meters = math.floor(centimeters / 100)
   centimeters = string.format("%.2d", centimeters % 100)
 
+  -- Create gui if needed
   local gui = player.gui.left["katamari"]
-  -- Create gui
   if not gui then
-    gui = player.gui.left.add{type = "flow", name = "katamari", direction = "vertical"}
-    local frame = gui.add{type = "frame", name = "katamari_frame", direction = "horizontal"}
-    local heading = frame.add{type = "flow", name = "katamari_heading", direction = "horizontal", style="katamari-heading"}
-    heading.add{type = "sprite", sprite = "entity/katamari-1"}
-    heading.add{type = "label", name = "katamari_meters", style="katamari-meters", caption = meters}
-    heading.add{type = "label", style = "katamari-symbols", caption = "m"}
-    heading.add{type = "label", name = "katamari_centimeters", style="katamari-centimeters", caption = centimeters}
-    heading.add{type = "label", style = "katamari-symbols", caption = "cm"}
+    gui = create_gui()
   end
 
-  -- Update gui
+  -- Update values
   gui.katamari_frame.katamari_heading.katamari_meters.caption = meters
   gui.katamari_frame.katamari_heading.katamari_centimeters.caption = centimeters
+end
+
+-- Create gui
+function create_gui(player)
+  local gui = player.gui.left.add{type = "flow", name = "katamari", direction = "vertical"}
+  local frame = gui.add{type = "frame", name = "katamari_frame", direction = "horizontal"}
+  local heading = frame.add{type = "flow", name = "katamari_heading", direction = "horizontal", style="katamari-heading"}
+  heading.add{type = "sprite", sprite = "entity/katamari-1"}
+  heading.add{type = "label", name = "katamari_meters", style="katamari-meters", caption = meters}
+  heading.add{type = "label", style = "katamari-symbols", caption = "m"}
+  heading.add{type = "label", name = "katamari_centimeters", style="katamari-centimeters", caption = centimeters}
+  heading.add{type = "label", style = "katamari-symbols", caption = "cm"}
+  return gui
 end
 
 -- Delete gui
