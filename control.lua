@@ -132,8 +132,12 @@ function on_player_driving_changed_state(event)
         katamari.dummy.destroy()
       end
       -- Create a dummy as a clone of the player
+      local dummy_name = "katamari-dummy-" .. player.character.name
+      if not game.entity_prototypes[dummy_name] then
+        dummy_name = "katamari-dummy-character"
+      end
       katamari.dummy = katamari.entity.surface.create_entity{
-        name = player.character.name,
+        name = dummy_name,
         force = katamari.entity.force,
         position = katamari.entity.position,
       }
