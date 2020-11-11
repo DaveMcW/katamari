@@ -160,7 +160,7 @@ function on_player_driving_changed_state(event)
       local position = katamari.dummy.surface.find_non_colliding_position(
         katamari.dummy.name,
         katamari.dummy.position,
-        katamari.radius * 1.25 + 3,
+        katamari.radius * 1.5 + 2,
         0.1
       )
       if position then
@@ -183,7 +183,7 @@ function update_gui(player, radius)
   -- Create gui if needed
   local gui = player.gui.left["katamari"]
   if not gui then
-    gui = create_gui()
+    gui = create_gui(player)
   end
 
   -- Update values
@@ -194,12 +194,13 @@ end
 -- Create gui
 function create_gui(player)
   local gui = player.gui.left.add{type = "flow", name = "katamari", direction = "vertical"}
-  local frame = gui.add{type = "frame", name = "katamari_frame", direction = "horizontal"}
-  local heading = frame.add{type = "flow", name = "katamari_heading", direction = "horizontal", style="katamari-heading"}
-  heading.add{type = "sprite", sprite = "entity/katamari-1"}
-  heading.add{type = "label", name = "katamari_meters", style="katamari-meters", caption = meters}
+  local frame = gui.add{type = "frame", style="katamari-frame", name = "katamari_frame", direction = "horizontal"}
+  local heading = frame.add{type = "flow", style="katamari-heading", name = "katamari_heading", direction = "horizontal"}
+  local sprite_container = heading.add{type = "flow", style="katamari-sprite-container", direction = "horizontal"}
+  sprite_container.add{type = "sprite", style="katamari-sprite", sprite = "entity/katamari-1"}
+  heading.add{type = "label", style="katamari-meters", name = "katamari_meters", caption = meters}
   heading.add{type = "label", style = "katamari-symbols", caption = "m"}
-  heading.add{type = "label", name = "katamari_centimeters", style="katamari-centimeters", caption = centimeters}
+  heading.add{type = "label", style="katamari-centimeters", name = "katamari_centimeters", caption = centimeters}
   heading.add{type = "label", style = "katamari-symbols", caption = "cm"}
   return gui
 end
@@ -246,8 +247,8 @@ function update_katamari(unit_number)
     end
     if dx ~= 0 or dy ~= 0 or orientation ~= katamari.entity.orientation then
       local driver_angle = katamari.entity.orientation * TWO_PI
-      local driver_x = katamari.entity.position.x - (katamari.radius + 0.5) * 1.5 * math.sin(driver_angle)
-      local driver_y = katamari.entity.position.y + 0.5 + (katamari.radius + 0.5) * 1.5 * math.cos(driver_angle)
+      local driver_x = katamari.entity.position.x - (katamari.radius + 0.7) * 1.4 * math.sin(driver_angle)
+      local driver_y = katamari.entity.position.y + 0.5 + (katamari.radius + 0.7) * 1.4 * math.cos(driver_angle)
       katamari.dummy.teleport{driver_x, driver_y}
       katamari.dummy.walking_state = {walking = true, direction = direction}
     else
