@@ -145,6 +145,7 @@ function on_player_driving_changed_state(event)
           dummy_inventory.insert{name = player_inventory[i].name, count = player_inventory[i].count}
         end
       end
+      katamari.dummy.color = player.color
       -- Disable dummy interactions
       katamari.dummy.destructible = false
       katamari.dummy.operable = false
@@ -199,9 +200,9 @@ function create_gui(player)
   local sprite_container = heading.add{type = "flow", style="katamari-sprite-container", direction = "horizontal"}
   sprite_container.add{type = "sprite", style="katamari-sprite", sprite = "entity/katamari-1"}
   heading.add{type = "label", style="katamari-meters", name = "katamari_meters", caption = meters}
-  heading.add{type = "label", style = "katamari-symbols", caption = "m"}
+  heading.add{type = "label", style = "katamari-symbols", caption = {"katamari-meters"}}
   heading.add{type = "label", style="katamari-centimeters", name = "katamari_centimeters", caption = centimeters}
-  heading.add{type = "label", style = "katamari-symbols", caption = "cm"}
+  heading.add{type = "label", style = "katamari-symbols", caption = {"katamari-centimeters"}}
   return gui
 end
 
