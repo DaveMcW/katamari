@@ -117,6 +117,9 @@ function on_player_driving_changed_state(event)
   -- Update katamari driver
   local player = game.players[event.player_index]
   if player.driving then
+    -- Update gui
+    update_gui(player, katamari.radius)
+
     if player.character then
       -- Rotate katamari towards the player
       if katamari.entity.speed == 0 then
@@ -124,55 +127,91 @@ function on_player_driving_changed_state(event)
         local dy = player.character.position.y - katamari.entity.position.y
         katamari.entity.orientation = math.atan2(dx, dy) / TWO_PI
       end
-      -- Clean up old dummy driver
-      if katamari.driver and katamari.driver.valid then
-        katamari.driver.destroy()
+      -- Clean up old dummy
+      if katamari.dummy and katamari.dummy.valid then
+        katamari.dummy.destroy()
       end
-      -- Create a dummy driver as a clone of the player
-      katamari.driver = katamari.entity.surface.create_entity{
+      -- Create a dummy as a clone of the player
+      katamari.dummy = katamari.entity.surface.create_entity{
         name = player.character.name,
         force = katamari.entity.force,
         position = katamari.entity.position,
       }
-      -- Give the dummy driver the same armor as the player
+      -- Give the dummy the same armor as the player
       local player_inventory = player.character.get_inventory(defines.inventory.character_armor)
-      local dummy_inventory = katamari.driver.get_inventory(defines.inventory.character_armor)
+      local dummy_inventory = katamari.dummy.get_inventory(defines.inventory.character_armor)
       for i = 1, #player_inventory do
         if player_inventory[i].valid_for_read then
           dummy_inventory.insert{name = player_inventory[i].name, count = player_inventory[i].count}
         end
       end
-      -- Disable dummy driver interactions
-      katamari.driver.destructible = false
-      katamari.driver.operable = false
-      -- Force recalculation of dummy driver position
+      -- Disable dummy interactions
+      katamari.dummy.destructible = false
+      katamari.dummy.operable = false
+      -- Force recalculation of dummy position
       katamari.last_orientation = nil
     end
   else
-    if katamari.driver and katamari.driver.valid then
-      -- Teleport player to the dummy driver's position
-      local position = katamari.driver.surface.find_non_colliding_position(
-        katamari.driver.name,
-        katamari.driver.position,
+    -- Delete gui
+    delete_gui(player)
+
+    if katamari.dummy and katamari.dummy.valid then
+      -- Teleport player to the dummy's position
+      local position = katamari.dummy.surface.find_non_colliding_position(
+        katamari.dummy.name,
+        katamari.dummy.position,
         katamari.radius * 1.25 + 3,
         0.1
       )
       if position then
         player.teleport(position)
       end
-      -- Destroy dummy driver
-      katamari.driver.destroy()
+      -- Destroy dummy
+      katamari.dummy.destroy()
     end
-    katamari.driver = nil
+    katamari.dummy = nil
+  end
+end
+
+-- Update gui
+function update_gui(player, radius)
+  -- Calculate meters and centimeters
+  local centimeters = math.floor(radius * 200 + 0.5)
+  local meters = math.floor(centimeters / 100)
+  centimeters = string.format("%.2d", centimeters % 100)
+
+  local gui = player.gui.left["katamari"]
+  -- Create gui
+  if not gui then
+    gui = player.gui.left.add{type = "flow", name = "katamari", direction = "vertical"}
+    local frame = gui.add{type = "frame", name = "katamari_frame", direction = "horizontal"}
+    local heading = frame.add{type = "flow", name = "katamari_heading", direction = "horizontal", style="katamari-heading"}
+    heading.add{type = "sprite", sprite = "entity/katamari-1"}
+    heading.add{type = "label", name = "katamari_meters", style="katamari-meters", caption = meters}
+    heading.add{type = "label", style = "katamari-symbols", caption = "m"}
+    heading.add{type = "label", name = "katamari_centimeters", style="katamari-centimeters", caption = centimeters}
+    heading.add{type = "label", style = "katamari-symbols", caption = "cm"}
+  end
+
+  -- Update gui
+  gui.katamari_frame.katamari_heading.katamari_meters.caption = meters
+  gui.katamari_frame.katamari_heading.katamari_centimeters.caption = centimeters
+end
+
+-- Delete gui
+function delete_gui(player)
+  local gui = player.gui.left["katamari"]
+  if gui then
+    gui.destroy()
   end
 end
 
 -- Delete katamari
 function delete_katamari(unit_number)
   local katamari = global.katamaris[unit_number]
-  -- Delete dummy driver
-  if katamari.driver and katamari.driver.valid and not katamari.growing then
-    katamari.driver.destroy()
+  -- Delete dummy
+  if katamari.dummy and katamari.dummy.valid and not katamari.growing then
+    katamari.dummy.destroy()
   end
   global.katamaris[unit_number] = nil
 end
@@ -193,8 +232,8 @@ function update_katamari(unit_number)
   katamari.last_orientation = katamari.entity.orientation
   katamari.last_position = katamari.entity.position
 
-  -- Update dummy driver
-  if katamari.driver and katamari.driver.valid then
+  -- Update dummy
+  if katamari.dummy and katamari.dummy.valid then
     local direction = math.floor((katamari.entity.orientation * 8 + 0.5) % 8)
     if katamari.entity.speed < 0 then
       direction = (direction + 4) % 8
@@ -203,10 +242,10 @@ function update_katamari(unit_number)
       local driver_angle = katamari.entity.orientation * TWO_PI
       local driver_x = katamari.entity.position.x - (katamari.radius + 0.5) * 1.5 * math.sin(driver_angle)
       local driver_y = katamari.entity.position.y + 0.5 + (katamari.radius + 0.5) * 1.5 * math.cos(driver_angle)
-      katamari.driver.teleport{driver_x, driver_y}
-      katamari.driver.walking_state = {walking = true, direction = direction}
+      katamari.dummy.teleport{driver_x, driver_y}
+      katamari.dummy.walking_state = {walking = true, direction = direction}
     else
-      katamari.driver.walking_state = {walking = false, direction = direction}
+      katamari.dummy.walking_state = {walking = false, direction = direction}
     end
   end
 
@@ -434,6 +473,10 @@ function grow_katamari(katamari, area)
   -- Increase size
   katamari.area = katamari.area + area / settings.global["katamari-growth-cost"].value
   katamari.radius = math.sqrt(katamari.area / math.pi / 4)
+  local driver = katamari.entity.get_driver()
+  if driver and driver.player then
+    update_gui(driver.player, katamari.radius)
+  end
 
   -- Upgrade entity
   if not RADII[katamari.size + 1] then return katamari end

@@ -1,4 +1,6 @@
 require("prototypes.entity")
+require("prototypes.font")
 require("prototypes.item")
 require("prototypes.recipe")
 require("prototypes.sprite")
+require("prototypes.style")
