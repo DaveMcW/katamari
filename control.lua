@@ -2,6 +2,7 @@ local MIN_PICKUP_SIZE = 1 / 120
 local MAX_PICKUP_SIZE = 1 / 12
 local KNOB_SCALE = 0.9
 local CIRCLE_SCALE = 2 / (144 * 0.5 / 32)  -- diameter divided by sprite size
+local MAX_ALERTS = 10
 local ALERT_DURATION = 300
 local TWO_PI = 2 * math.pi
 local INVERSE_ROOT_2 = 1 / math.sqrt(2)
@@ -698,7 +699,7 @@ function add_alert(katamari, name, localised_name)
   end
 
   -- Create new alert
-  if not found then
+  if not found and #alerts < MAX_ALERTS then
     table.insert(alerts, {
       name = name,
       count = 1,
