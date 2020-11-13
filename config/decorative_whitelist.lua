@@ -9,7 +9,7 @@ return {
   ["green-asterisk-mini"] = 0.3906,
   ["green-bush-mini"] = 0.4727,
   ["green-croton"] = 0.7656,
-  ["green-desert-bush"] = 0.5625,
+  ["green-desert-bush"] = 0.3896,
   ["green-hairy-grass"] = 0.6602,
   ["green-pita-mini"] = 0.6602,
   ["red-croton"] = 0.7656,
