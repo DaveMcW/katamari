@@ -21,6 +21,7 @@ local TRANSPORT_BELT_CONNECTABLE = {
 
 function on_init()
   global.katamaris = {}
+  global.alerts = {}
   on_configuration_changed()
 end
 
@@ -485,9 +486,11 @@ function grow_katamari(katamari, area)
   -- Increase size
   katamari.area = katamari.area + area / settings.global["katamari-growth-cost"].value
   katamari.radius = math.sqrt(katamari.area / math.pi / 4)
-  local driver = katamari.entity.get_driver()
-  if driver and driver.player then
-    update_gui(driver.player, katamari.radius)
+
+  -- Update gui
+  local player = get_player(katamari)
+  if player then
+    update_gui(player, katamari.radius)
   end
 
   -- Upgrade entity
@@ -537,6 +540,14 @@ function grow_katamari(katamari, area)
     draw_sprite(new_katamari, new_katamari.sprites[i])
   end
   return new_katamari
+end
+
+function get_player(katamari)
+  local player = katamari.entity.get_driver()
+  if player and not player.is_player() then
+    player = player.player
+  end
+  return player
 end
 
 -- Calculate entity size and area
@@ -600,7 +611,8 @@ end
 
 -- Add a sprite to the katamari
 function add_sprite(katamari, name)
-  --TODO: game.print(name)
+  local player = get_player(katamari)
+
   -- Compare with old sprite
   if katamari.sprites[katamari.next_sprite] then
     if global.items[name].area < katamari.sprites[katamari.next_sprite].area then
