@@ -39,3 +39,16 @@ data.raw["gui-style"]["default"]["katamari-centimeters"] = {
   font = "katamari-centimeters",
   top_margin = 2,
 }
+data.raw["gui-style"]["default"]["katamari-alert-flow"] = {
+  type = "horizontal_flow_style",
+  parent = "horizontal_flow",
+  vertical_align = "center",
+}
+data.raw["gui-style"]["default"]["katamari-alert-frame"] = {
+  type = "frame_style",
+  parent = "frame",
+  size = 40,
+  horizontal_align = "center",
+  vertical_align = "center",
+  padding = 0,
+}

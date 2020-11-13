@@ -2,6 +2,7 @@ local MIN_PICKUP_SIZE = 1 / 120
 local MAX_PICKUP_SIZE = 1 / 12
 local KNOB_SCALE = 0.9
 local CIRCLE_SCALE = 2 / (144 * 0.5 / 32)  -- diameter divided by sprite size
+local ALERT_DURATION = 300
 local TWO_PI = 2 * math.pi
 local INVERSE_ROOT_2 = 1 / math.sqrt(2)
 local ENTITY_BLACKLIST = require("config.entity_blacklist")
@@ -70,6 +71,19 @@ function on_tick()
   -- Update katamaris
   for unit_number, katamari in pairs(global.katamaris) do
     update_katamari(unit_number)
+  end
+
+  -- Remove old alerts
+  for player_index, alerts in pairs(global.alerts) do
+    local i = 1
+    while i <= #alerts do
+      if alerts[i].expires <= game.tick then
+        delete_alert(player_index, alerts[i].name)
+        table.remove(alerts, i)
+      else
+        i = i + 1
+      end
+    end
   end
 end
 
@@ -159,6 +173,7 @@ function on_player_driving_changed_state(event)
     end
   else
     -- Delete gui
+    global.alerts[player.index] = nil
     delete_gui(player)
 
     if katamari.dummy and katamari.dummy.valid then
@@ -410,12 +425,17 @@ function eat_entity(katamari, entity)
 
   -- Minimum size required to eat
   if area <= katamari.area * MAX_PICKUP_SIZE then
-    entity.destroy{raise_destroy = true}
     -- Minimum size required to grow
     if area >= katamari.area * MIN_PICKUP_SIZE then
       add_sprite(katamari, name)
+      local localised_name = entity.localised_name
+      if entity.type == "item-entity" then
+        localised_name = entity.stack.prototype.localised_name
+      end
+      add_alert(katamari, name, localised_name)
       katamari = grow_katamari(katamari, area)
     end
+    entity.destroy{raise_destroy = true}
   end
   return katamari
 end
@@ -439,6 +459,7 @@ function eat_transport_items(katamari, entity)
         if data.area >= katamari.area * MIN_PICKUP_SIZE then
           for j = 1, count do
             add_sprite(katamari, sprite_name)
+            add_alert(katamari, sprite_name, game.item_prototypes[name].localised_name)
           end
           katamari = grow_katamari(katamari, data.area * count)
         end
@@ -470,6 +491,7 @@ function eat_decorative(katamari, target)
       if area >= katamari.area * MIN_PICKUP_SIZE then
         for i = 1, target.amount do
           add_sprite(katamari, name)
+          add_alert(katamari, name)
         end
         katamari = grow_katamari(katamari, area * target.amount)
       end
@@ -611,8 +633,6 @@ end
 
 -- Add a sprite to the katamari
 function add_sprite(katamari, name)
-  local player = get_player(katamari)
-
   -- Compare with old sprite
   if katamari.sprites[katamari.next_sprite] then
     if global.items[name].area < katamari.sprites[katamari.next_sprite].area then
@@ -642,6 +662,79 @@ function add_sprite(katamari, name)
 
   -- Draw sprite
   draw_sprite(katamari, data)
+end
+
+function add_alert(katamari, name, localised_name)
+  local player = get_player(katamari)
+  if not player then return end
+
+  -- Load data
+  local gui = player.gui.left["katamari"]
+  if not gui then
+    gui = create_gui(player)
+  end
+  if not global.alerts[player.index] then
+    global.alerts[player.index] = {}
+  end
+  local alerts = global.alerts[player.index]
+
+  -- Update existing alert
+  local found = false
+  for _, alert in pairs(alerts) do
+    if alert.name == name then
+      found = true
+      alert.count = alert.count + 1
+      alert.expires = game.tick + ALERT_DURATION
+      -- Update gui
+      for _, gui_alert in pairs(gui.children) do
+        if gui_alert.name == "katamari-" .. name then
+          local caption = gui_alert.children[2].caption
+          caption[3] = alert.count
+          gui_alert.children[2].caption = caption
+        end
+      end
+      break
+    end
+  end
+
+  -- Create new alert
+  if not found then
+    table.insert(alerts, {
+      name = name,
+      count = 1,
+      expires = game.tick + ALERT_DURATION,
+    })
+    -- Localize name
+    if localised_name then
+      -- Already exists
+    elseif name:sub(1, 20) == "katamari-decorative-" then
+      localised_name = {"decorative-name." .. name:sub(21)}
+    else
+      local entity_data = {}
+      for substring in string.gmatch(name, "[^/]+") do
+        table.insert(entity_data, substring)
+      end
+      localised_name = {entity_data[1] .. "-name." .. entity_data[2]}
+    end
+    -- Create gui
+    local gui_alert = gui.add{type = "flow", style = "katamari-alert-flow", name = "katamari-"..name, direction = horizontal}
+    local sprite_container = gui_alert.add{type = "frame", style = "katamari-alert-frame"}
+    sprite_container.add{type = "sprite", style = "katamari-sprite", sprite = name}
+    gui_alert.add{type = "label", style = "main_menu_version_label", caption = {"katamari-alert", localised_name, 1}}
+  end
+end
+
+function delete_alert(player_index, name)
+  local player = game.players[player_index]
+  if not player then return end
+  local gui = player.gui.left["katamari"]
+  if not gui then return end
+  for _, gui_alert in pairs(gui.children) do
+    if gui_alert.name == "katamari-" .. name then
+      gui_alert.destroy()
+      return
+    end
+  end
 end
 
 function draw_circle(katamari)
