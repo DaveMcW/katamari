@@ -3,6 +3,10 @@ for i, radius in pairs(require("config.radius")) do
   if radius > 4.75 then
     diameter = string.format("%.0f", 2*radius)
   end
+  flags = {}
+  if i > 1 then
+    flags = {"hidden"}
+  end
   local item = {
     type = "item-with-entity-data",
     name = "katamari-"..i,
@@ -15,6 +19,7 @@ for i, radius in pairs(require("config.radius")) do
     icon_mipmaps = 4,
     icon_size = 64,
     stack_size = 1,
+    flags = flags,
   }
   data:extend{item}
 end
