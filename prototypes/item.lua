@@ -3,9 +3,11 @@ for i, radius in pairs(require("config.radius")) do
   if radius > 4.75 then
     diameter = string.format("%.0f", 2*radius)
   end
-  flags = {}
+  local flags = {}
+  local subgroup = "transport"
   if i > 1 then
     flags = {"hidden"}
+    subgroup = nil
   end
   local item = {
     type = "item-with-entity-data",
@@ -13,7 +15,7 @@ for i, radius in pairs(require("config.radius")) do
     localised_name = {"entity-name.katamari"},
     localised_description = {"item-description.katamari", diameter},
     place_result = "katamari-"..i,
-    subgroup = "transport",
+    subgroup = subgroup,
     order = "b[personal-transport]-k[katamari]-" .. string.format("%.2d", i),
     icon = "__katamari__/graphics/icon.png",
     icon_mipmaps = 4,
