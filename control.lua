@@ -442,12 +442,6 @@ function eat_entity(katamari, entity)
 end
 
 function eat_transport_items(katamari, entity)
-  -- Deconstruct entity so LuaTransportLine contains only the items we want
-  local to_be_deconstructed = entity.to_be_deconstructed()
-  if not to_be_deconstructed then
-    entity.order_deconstruction(entity.force)
-  end
-  -- Read LuaTransportLine
   for i = 1, entity.get_max_transport_line_index() do
     local transport_line = entity.get_transport_line(i)
     for name, count in pairs(transport_line.get_contents()) do
@@ -466,11 +460,6 @@ function eat_transport_items(katamari, entity)
         end
       end
     end
-  end
-  local items = entity.get_transport_line(1)
-  -- Cancel deconstruction
-  if not to_be_deconstructed then
-    entity.cancel_deconstruction(entity.force)
   end
   return katamari
 end
