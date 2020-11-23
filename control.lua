@@ -4,6 +4,7 @@ local KNOB_SCALE = 0.9
 local CIRCLE_SCALE = 2 / (144 * 0.5 / 32)  -- diameter divided by sprite size
 local MAX_ALERTS = 10
 local ALERT_DURATION = 300
+local SOUND_DURATION = 15
 local TWO_PI = 2 * math.pi
 local INVERSE_ROOT_2 = 1 / math.sqrt(2)
 local ENTITY_BLACKLIST = require("config.entity_blacklist")
@@ -434,6 +435,7 @@ function eat_entity(katamari, entity)
         localised_name = entity.stack.prototype.localised_name
       end
       add_alert(katamari, name, localised_name)
+      play_pickup_sound(katamari)
       katamari = grow_katamari(katamari, area)
     end
     entity.destroy{raise_destroy = true}
@@ -455,6 +457,7 @@ function eat_transport_items(katamari, entity)
           for j = 1, count do
             add_sprite(katamari, sprite_name)
             add_alert(katamari, sprite_name, game.item_prototypes[name].localised_name)
+            play_pickup_sound(katamari)
           end
           katamari = grow_katamari(katamari, data.area * count)
         end
@@ -482,6 +485,7 @@ function eat_decorative(katamari, target)
         for i = 1, target.amount do
           add_sprite(katamari, name)
           add_alert(katamari, name)
+          play_pickup_sound(katamari)
         end
         katamari = grow_katamari(katamari, area * target.amount)
       end
@@ -727,6 +731,21 @@ function delete_alert(player_index, name)
   end
 end
 
+function play_pickup_sound(katamari)
+  -- Wait for cooldown
+  if katamari.next_sound and katamari.next_sound > game.tick then
+    return
+  end
+  katamari.next_sound = game.tick + SOUND_DURATION
+
+  -- Play pickup sound
+  katamari.entity.surface.play_sound{
+    path = "katamari-pickup",
+    position = katamari.entity.position,
+    volume_modifier = 0.5,
+  }
+end
+
 function draw_circle(katamari)
   katamari.circle = rendering.draw_sprite{
     sprite = "katamari-circle",
@@ -785,14 +804,16 @@ function normalize_quaternion(q)
   q.z = q.z / magnitude
 end
 
--- Katamari has type=car
-local filter = {{filter = "type", type = "car"}}
+-- Global events
 script.on_init(on_init)
 script.on_configuration_changed(on_configuration_changed)
 script.on_event(defines.events.on_tick, on_tick)
+script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
+
+-- Katamari events
+local filter = {{filter = "type", type = "car"}}
 script.on_event(defines.events.on_built_entity, on_built, filter)
 script.on_event(defines.events.on_robot_built_entity, on_built, filter)
 script.on_event(defines.events.script_raised_built, on_built, filter)
 script.on_event(defines.events.script_raised_revive, on_built, filter)
 script.on_event(defines.events.on_entity_cloned, on_built, filter)
-script.on_event(defines.events.on_player_driving_changed_state, on_player_driving_changed_state)
