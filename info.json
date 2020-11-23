@@ -4,7 +4,7 @@
   "version":"0.0.3",
   "title":"Katamari",
   "homepage":"",
-  "description":"Adds a sticky ball called a katamari. Drive it like a vehicle and pick up as many items as possible!",
+  "description":"Adds a sticky ball called a katamari that you can drive like a vehicle. Smaller objects will attach to the katamari and make it grow bigger.",
   "dependencies": ["base"],
   "factorio_version": "1.1"
 }
