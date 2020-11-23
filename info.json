@@ -1,10 +1,10 @@
 {
   "name":"katamari",
   "author":"DaveMcW",
-  "version":"0.0.2",
+  "version":"0.0.3",
   "title":"Katamari",
   "homepage":"",
   "description":"Adds a katamari ball vehicle.",
   "dependencies": ["base"],
-  "factorio_version": "1.0"
+  "factorio_version": "1.1"
 }
