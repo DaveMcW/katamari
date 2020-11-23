@@ -369,9 +369,9 @@ function update_katamari(unit_number)
     local z = c1*KNOBS[i].x + c2*KNOBS[i].y + c3*KNOBS[i].z
     local target_offset = {x * katamari.radius, y * katamari.radius}
     local knob_name = get_knob_name(z)
-    local render_layer = 129
+    local render_layer = "129"
     if z > -0.0872 then
-      render_layer = 131
+      render_layer = "131"
     end
     -- Rendering functions are expensive, so try to find ways to avoid them
     if z > -0.5 then
@@ -409,7 +409,7 @@ function update_katamari(unit_number)
     rendering.set_target(sprite.sprite_id, katamari.entity, target_offset)
     if sprite.last_render_layer ~= render_layer then
       sprite.last_render_layer = render_layer
-      rendering.set_render_layer(sprite.sprite_id, render_layer)
+      rendering.set_render_layer(sprite.sprite_id, tostring(render_layer))
     end
   end
 
@@ -753,15 +753,15 @@ function draw_circle(katamari)
     target = katamari.entity,
     x_scale = katamari.radius * CIRCLE_SCALE,
     y_scale = katamari.radius * CIRCLE_SCALE,
-    render_layer = 130,
+    render_layer = "130",
   }
 end
 
 -- Draw sprite on the map
 function draw_knob(katamari, i)
-  local render_layer = 129
+  local render_layer = "129"
   if KNOBS[i].z > -0.0872 then
-    render_layer = 131
+    render_layer = "131"
   end
   local sprite_id = rendering.draw_sprite{
     sprite = get_knob_name(KNOBS[i].z),
