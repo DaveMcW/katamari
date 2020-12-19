@@ -8,6 +8,7 @@ local recipe = {
     {"low-density-structure", 120},
     {"heavy-oil-barrel", 12},
   },
+  enabled = false,
 }
 data:extend{recipe}
 
